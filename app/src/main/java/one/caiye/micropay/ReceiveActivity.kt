@@ -1,4 +1,4 @@
-package com.dfz.micropay
+package one.caiye.micropay
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
@@ -110,8 +110,8 @@ class ReceiveActivity : AppCompatActivity() {
                 Toast.makeText(this@ReceiveActivity, "Time out", Toast.LENGTH_SHORT).show()
             }
 
+            showProgress(false)
         }
-        showProgress(false)
 
     }
 

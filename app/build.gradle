@@ -7,7 +7,7 @@ apply plugin: 'kotlin-android-extensions'
 android {
     compileSdkVersion 27
     defaultConfig {
-        applicationId "com.dfz.micropay"
+        applicationId "one.caiye.micropay"
         minSdkVersion 24
         targetSdkVersion 27
         versionCode 1

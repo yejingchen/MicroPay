@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.dfz.micropay">
+    package="one.caiye.micropay">
 
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -8,8 +8,6 @@
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="true" />
-
-
 
     <application
         android:allowBackup="true"
@@ -35,7 +33,7 @@
             <!-- </intent-filter> -->
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.dfz.micropay.MainActivity" />
+                android:value=".MainActivity" />
         </activity>
         <activity
             android:name=".ReceiveActivity"
@@ -50,7 +48,7 @@
 
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.dfz.micropay.MainActivity" />
+                android:value=".MainActivity" />
         </activity>
         <activity
             android:name=".LoginActivity"
