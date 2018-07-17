@@ -43,7 +43,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
 
-                <data android:mimeType="pay/vnd.micropay.dfz" />
+                <data android:mimeType="pay/vnd.micropay.caiye" />
             </intent-filter>
 
             <meta-data

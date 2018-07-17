@@ -55,7 +55,7 @@ class TransferActivity : AppCompatActivity(), NfcAdapter.CreateNdefMessageCallba
     override fun createNdefMessage(p0: NfcEvent?): NdefMessage {
         val text = "$username%$password%$moneyAmount"
         return NdefMessage(arrayOf(
-                NdefRecord.createMime("pay/vnd.micropay.dfz", text.toByteArray())
+                NdefRecord.createMime("pay/vnd.micropay.caiye", text.toByteArray())
         ))
     }
 
