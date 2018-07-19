@@ -33,5 +33,7 @@
     <string name="ItemID">ItemID</string>
     <string name="UserID">UserID</string>
     <string name="set_button">Set Button</string>
+    <string name="receive_waiting_hint">Touch this device to transfer</string>
+    <string name="nfc_transfer_waiting">Waiting...</string>
 
 </resources>

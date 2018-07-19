@@ -75,7 +75,7 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
                     recordArray
                 }.await()
                 */
-                transferRecord.add(Record("payer", "payee", "2018-07-19-11-17-00", "1984"))
+                transferRecord.add(Record("payer", "payee", 1984.0, "2018-07-19-11-17-00"))
                 list.adapter = MyTradeRecordRecyclerViewAdapter(transferRecord, username)
 
             } catch (e: SocketTimeoutException) {
@@ -139,9 +139,9 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 val item = mValues[position]
                 holder.timeView.text = item.time
-                holder.objectView.text = if (item.payer==username) item.payee else item.payer
-                holder.moneyView.text = if (item.payer==username) "-${item.money}" else "+${item.money}"
-                holder.moneyView.setTextColor(if (item.payer!=username) Color.RED else Color.BLACK)
+                holder.objectView.text = if (item.username_from==username) item.username_to else item.username_from
+                holder.moneyView.text = if (item.username_from==username) "-${item.amount}" else "+${item.amount}"
+                holder.moneyView.setTextColor(if (item.username_from!=username) Color.RED else Color.BLACK)
 
 
                 with(holder.mView) {

@@ -10,17 +10,18 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import kotlinx.android.synthetic.main.activity_receive.*
+import com.danneu.result.Result
+import kotlinx.android.synthetic.main.activity_transfer.*
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.async
 import org.jetbrains.anko.coroutines.experimental.bg
+import java.io.IOException
 import java.net.SocketTimeoutException
 
 class TransferActivity : AppCompatActivity() {
 
-    private var mTcpClient: TcpClient? = null
     private var username: String? = null
-
+    private lateinit var api: Api
 
     companion object {
         const val TAG = "TransferActivity"
@@ -29,21 +30,17 @@ class TransferActivity : AppCompatActivity() {
     private lateinit var mNfcAdapter: NfcAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_receive)
+        setContentView(R.layout.activity_transfer)
         val tmp: NfcAdapter? = NfcAdapter.getDefaultAdapter(this)
+        api = Api(this)
 
         if (tmp == null) {
             Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
             finish()
             return
-        } else {
-            Toast.makeText(this, "NFC is available", Toast.LENGTH_LONG).show()
-            mNfcAdapter = tmp
         }
-        mNfcAdapter.setNdefPushMessage(null, this)
 
-//        showProgress(false)
-        Log.d(TAG, "textview is ${receive_textView.text}")
+        mNfcAdapter.setNdefPushMessage(null, this)
 
         username = intent.getStringExtra("username")
     }
@@ -59,63 +56,47 @@ class TransferActivity : AppCompatActivity() {
     private fun processIntent(intent: Intent?) {
         val rawMsgs = intent?.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
         val msg = rawMsgs?.get(0) as NdefMessage
-        receive_textView.text = "waiting..."
-        Log.d(TAG, "textview is ${receive_textView.text}")
+        receive_textView.text = getString(R.string.nfc_transfer_waiting)
         val seq = String(msg.records[0].payload).splitToSequence("%")
-        val payer = seq.first()
-        val payerPassword = seq.elementAt(1)
+        val receiver = seq.first()
         val money = seq.last()
 
-        sendServerMessage(payer, payerPassword, money)
+        sendServerMessage(receiver, money)
     }
 
-    private fun sendServerMessage(payer: String, payerPassword: String, money: String) {
+    private fun sendServerMessage(receiver: String, amount: String) {
         showProgress(true)
 
-        if (mTcpClient == null) {
-            mTcpClient = TcpClient.instance
-        }
-
-        val transferMessage = "TRANSFER%$payer%$payerPassword%$username%$money\n"
         async(UI) {
             try {
-                val response = bg {
-                    mTcpClient!!.connect()
-                    mTcpClient!!.sendMessage(transferMessage)
-                    Log.d(TAG, "message sent")
-                    val response = mTcpClient!!.read()
-                    mTcpClient!!.read()
-                    response
-//                    mTcpClient!!.logInResult
+                val result = bg {
+                    api.initiateTransaction(username!!,
+                            receiver, amount.toDouble())
                 }.await()
-                Log.d(TAG, "transfer response: [$response]")
-                when (response) {
-                    "TRANSFER_ERROR%PASSWORD_INCORRECT" -> {
-                        Toast.makeText(this@TransferActivity, "password incorrect", Toast.LENGTH_SHORT).show()
-                        receive_textView.text = "wrong password"
+                when (result) {
+                    is Result.Ok -> {
+                        val msg = "Transferred $amount to $receiver"
+                        Log.d(TAG, msg)
+                        Toast.makeText(this@TransferActivity, msg, Toast.LENGTH_SHORT).show()
                     }
-                    "TRANSFER_SUCCESS" -> {
-//                        mTcpClient!!.read()
-                        Toast.makeText(this@TransferActivity, "success", Toast.LENGTH_SHORT).show()
-                        receive_textView.text = "success! get ${money} yuan from ${payer}"
-                    }
-
-                    else -> {
-                        Toast.makeText(this@TransferActivity, "strange error", Toast.LENGTH_SHORT).show()
-                        receive_textView.text = "strange error"
+                    is Result.Err -> {
+                        val msg = "Failed to transfer: ${result.error.message}"
+                        Log.d(TAG, msg)
+                        Toast.makeText(this@TransferActivity, msg, Toast.LENGTH_LONG).show()
                     }
                 }
-
-
+            } catch (e: IOException) {
+                Toast.makeText(this@TransferActivity, "Error connecting: $e", Toast.LENGTH_LONG).show()
+                Log.d(TAG, e.toString())
+            } catch (e: UnexpectedAPIRespException) {
+                Toast.makeText(this@TransferActivity, "Unexpected API response: ${e.body}", Toast.LENGTH_LONG).show()
+                Log.d(TAG, "Unexpected API response: ${e.body}")
             } catch (e: SocketTimeoutException) {
-                Toast.makeText(this@TransferActivity, "Time out", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@TransferActivity, "Connection timeout: $e", Toast.LENGTH_LONG).show()
             }
-
-            showProgress(false)
         }
 
     }
-
 
     private fun showProgress(show: Boolean) {
 

@@ -12,18 +12,11 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
 class MainActivity : AppCompatActivity() {
-    override fun onDestroy() {
-        super.onDestroy()
-        TcpClient.instance.stopClient()
-    }
 
     companion object {
         lateinit var username: String
-        lateinit var logInPassword: String
         var shoppreference: SharedPreferences? = null
         var shopeditor: SharedPreferences.Editor? = null
-        var httppreference: SharedPreferences? = null
-        var httpeditor: SharedPreferences.Editor? = null
         const val NUM_ITEMS = 5
 
         class MyPageAdapter(fm: FragmentManager?) : FragmentPagerAdapter(fm) {
@@ -37,7 +30,6 @@ class MainActivity : AppCompatActivity() {
             override fun getItem(position: Int): Fragment {
                 val args = Bundle()
                 args.putString("username", username)
-                args.putString("password", logInPassword)
                 return when (position) {
                     0 -> {
                         val f = MyFragment()
@@ -61,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    internal lateinit var api: Api
 
     private lateinit var mPageAdapter: MyPageAdapter
 
@@ -69,16 +62,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
+        api = Api(this)
+
         mPageAdapter = MyPageAdapter(supportFragmentManager)
 
         pager.adapter = mPageAdapter
 
         username = intent.getStringExtra("username")
-        logInPassword = intent.getStringExtra("LogInPassword")
         shoppreference=getSharedPreferences("shopping", MODE_PRIVATE)
         shopeditor=shoppreference?.edit()
-        httppreference=getSharedPreferences("cookie", MODE_PRIVATE)
-        httpeditor=shoppreference?.edit()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

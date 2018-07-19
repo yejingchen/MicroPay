@@ -28,12 +28,10 @@ class ReceiveFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         recv_button.setOnClickListener {
             val moneyAmount = money.text.toString()
-            val password = transferPasswordTextView.text.toString()
             if (!moneyAmount.isEmpty()) {
                 val intent = Intent(activity, ReceiveActivity::class.java)
                 intent.putExtra("money", moneyAmount)
                 intent.putExtra("username", username)
-                intent.putExtra("payerPassword", password)
                 startActivity(intent)
             } else {
                 Toast.makeText(activity, "please input money", Toast.LENGTH_SHORT).show()

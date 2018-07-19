@@ -8,10 +8,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import com.danneu.result.Result
 import kotlinx.android.synthetic.main.fragment_my.*
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.async
 import org.jetbrains.anko.coroutines.experimental.bg
+import java.io.IOException
 import java.net.SocketTimeoutException
 
 
@@ -20,11 +22,7 @@ import java.net.SocketTimeoutException
  *
  */
 class MyFragment : Fragment() {
-    //    private var mNum: Int = 0
     private var username = ""
-    private var password = ""
-    private var mTcpClient: TcpClient? = null
-
 
     companion object {
         private const val TAG = "MyFragment"
@@ -34,7 +32,6 @@ class MyFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         username = arguments!!.getString("username")
-        password = arguments!!.getString("password")
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -52,32 +49,34 @@ class MyFragment : Fragment() {
     }
 
     private fun updateBalance() {
-        if (mTcpClient == null) {
-            mTcpClient = TcpClient.instance
-        }
-
-        val message = "BALANCE\n"
+        val api = (activity as MainActivity).api
 
         async(UI) {
             try {
-                balanceValueTextView.text = bg {
-                    mTcpClient!!.connect()
-                    mTcpClient!!.sendMessage(message)
-                    Log.d(TAG, "message sent")
-                    var response = mTcpClient!!.read()
-                    val balance = response!!.removePrefix("BALANCE_REPLY%").removeSuffix("\n")
+                Log.d(TAG, "Querying balance")
+                val info = bg { api.getAccountInfo() }.await()
+                when (info) {
+                    is Result.Ok -> {
+                        Log.d(TAG, "Balance is ${info.value.payload.balance}")
+                        balanceValueTextView.text = "${info.value.payload.balance}"
+                    }
 
-                    Log.d(TAG, "balance response1: $response")
-                    response = mTcpClient!!.read()
-                    Log.d(TAG, "balance response2: $response")
-                    balance
+                    is Result.Err -> {
+                        val msg = info.error.message
 
-                }.await()
-
+                        Log.d(TAG, "Failed to display balance: $msg")
+                        Toast.makeText(activity, "Failed to display balance: $msg", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: IOException) {
+                Toast.makeText(activity, "Error connecting: $e", Toast.LENGTH_LONG).show()
+                Log.d(TAG, e.toString())
+            } catch (e: UnexpectedAPIRespException) {
+                Toast.makeText(activity, "Unexpected API response: ${e.body}", Toast.LENGTH_LONG).show()
+                Log.d(TAG, "Unexpected API response: ${e.body}")
             } catch (e: SocketTimeoutException) {
-                Toast.makeText(activity, "Time out", Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, "Connection timeout: $e", Toast.LENGTH_LONG).show()
             }
-//            mTcpClient!!.stopClient()
         }
     }
 }

@@ -8,10 +8,12 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import com.danneu.result.Result
 import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.async
 import org.jetbrains.anko.coroutines.experimental.bg
+import java.io.IOException
 import java.net.SocketTimeoutException
 
 /**
@@ -19,10 +21,11 @@ import java.net.SocketTimeoutException
  */
 class LoginActivity : AppCompatActivity() {
 
-    private var mTcpClient: TcpClient? = null
-    private var logInSuccess = false
+    private lateinit var api: Api
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        api = Api(this)
         setContentView(R.layout.activity_login)
         logInButton.setOnClickListener { attemptLogin() }
         showProgress(false)
@@ -39,48 +42,38 @@ class LoginActivity : AppCompatActivity() {
         val password = passwordTextView.text.toString()
         showProgress(true)
 
-
-        if (mTcpClient == null) {
-            mTcpClient = TcpClient.instance
-        }
-
-        val message = "LOGIN%$username%$password\n"
-
         async(UI) {
             try {
-                bg {
-//                    mTcpClient!!.connect()
-//                    mTcpClient!!.sendMessage(message)
-                    Log.d(TAG, "message sent")
-//                    val response = mTcpClient!!.read()
-//                    if (response == "LOGIN_ON") {
-                    Log.d(TAG, "log in success")
-                    logInSuccess = true
-//                    }else{
-//                        Log.d(TAG, "log in error $response")
-//                        logInSuccess = true
-//                    }
-//                    mTcpClient!!.logInResult
-                }.await()
-                if (logInSuccess) {
-                    Toast.makeText(this@LoginActivity, "log in success", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this@LoginActivity, MainActivity::class.java)
-                    intent.putExtra("username", username)
-                    intent.putExtra("LogInPassword", password)
-                    startActivity(intent)
-                } else {
-                    mPasswordLayout.error = "wrong password"
+                Log.d(TAG, "Logging in $username")
+                val result = bg { api.login(username, password) }.await()
+                when (result) {
+                    is Result.Ok -> {
+                        Log.d(TAG, "Login Success")
+
+                        Toast.makeText(this@LoginActivity, "Login Success", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@LoginActivity, MainActivity::class.java)
+                        intent.putExtra("username", username)
+                        startActivity(intent)
+                    }
+
+                    is Result.Err -> {
+                        val msg = result.error.message
+                        Log.d(TAG, "Login failed: $msg")
+                        Toast.makeText(this@LoginActivity, "Login failed: $msg", Toast.LENGTH_LONG).show()
+                    }
                 }
-
-
+            } catch (e: IOException) {
+                Toast.makeText(this@LoginActivity, "Error connecting: $e", Toast.LENGTH_LONG).show()
+                Log.d(TAG, e.toString())
+            } catch (e: UnexpectedAPIRespException) {
+                Toast.makeText(this@LoginActivity, "Unexpected API response: ${e.body}", Toast.LENGTH_LONG).show()
+                Log.d(TAG, "Unexpected API response: ${e.body}")
             } catch (e: SocketTimeoutException) {
-                Toast.makeText(this@LoginActivity, "Time out", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@LoginActivity, "Connection timeout: $e", Toast.LENGTH_LONG).show()
             }
-//            mTcpClient!!.stopClient()
             showProgress(false)
         }
     }
-
 
     private fun showProgress(show: Boolean) {
         val shortAnimTime = resources.getInteger(android.R.integer.config_shortAnimTime)
