@@ -12,16 +12,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
-import kotlinx.android.synthetic.main.fragment_traderecord.view.*
+import com.danneu.result.Result
+import kotlinx.android.synthetic.main.fragment_traderecord_item.view.*
 import kotlinx.android.synthetic.main.fragment_traderecord_list.*
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.async
 import org.jetbrains.anko.coroutines.experimental.bg
+import java.io.IOException
 import java.net.SocketTimeoutException
 
 class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
-    private var mTcpClient: TcpClient? = null
     private val transferRecord: MutableList<Record> = ArrayList()
 
     private lateinit var username: String
@@ -30,61 +31,45 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
         arguments?.let {
             username = it.getString("username")
         }
+
+        api = (activity as MainActivity).api
     }
 
     override fun onRefresh() {
         Toast.makeText(activity, "refresh", Toast.LENGTH_SHORT).show()
+        transferRecord.clear()
 
-        if (mTcpClient == null) {
-            mTcpClient = TcpClient.instance
-
-        }
-
-        val message = "RECORD\n"
         async(UI) {
             try {
-                /*
-                transferRecord = bg {
-                    mTcpClient!!.connect()
-                    mTcpClient!!.sendMessage(message)
-                    Log.d(TAG, "message sent")
-
-                    val response = mTcpClient!!.read()
-                    val responseArray = response!!.split("%")
-                    val recordArray: MutableList<Record> = ArrayList()
-                    if (responseArray[0] == "RECORD_REPLY") {
-                        var i = 1
-                        while (i < responseArray.size) {
-                            val payer = responseArray[i]
-                            val payee = responseArray[i + 1]
-                            val time = responseArray[i + 2]
-                            val money = responseArray[i + 3]
-                            i += 4
-                            recordArray.add(Record(payer, payee, time, money))
+                val records = bg { api.getRecords() }.await()
+                when (records) {
+                    is Result.Ok -> {
+                        Log.d(TAG, "records length is ${records.value.payload.size}")
+                        for (rec in records.value.payload) {
+                            Log.d(TAG, "Adding $rec to list")
+                            transferRecord.add(rec)
                         }
-                        val finishMessage = mTcpClient!!.read()
-                        if (finishMessage == "RECORD_REPLY_FINISHED") {
-                            Log.d(TAG, "record finish")
-                        } else {
-                            Log.e(TAG, "wrong record format$finishMessage")
-                        }
-                    } else {
-                        Log.d(TAG, "wrong record format$responseArray")
+                        list.adapter.notifyDataSetChanged()
                     }
-//                    mTcpClient!!.logInResult
-                    recordArray
-                }.await()
-                */
-                transferRecord.add(Record("payer", "payee", 1984.0, "2018-07-19-11-17-00"))
-                list.adapter = MyTradeRecordRecyclerViewAdapter(transferRecord, username)
+                    is Result.Err -> {
+                        val msg = "Failed to retrieve transaction records: ${records.error.message}"
+                        Log.d(TAG, msg)
+                        Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
+                    }
+                }
 
+            } catch (e: IOException) {
+                Toast.makeText(activity, "Error connecting: $e", Toast.LENGTH_LONG).show()
+                Log.d(TAG, e.toString())
+            } catch (e: UnexpectedAPIRespException) {
+                Toast.makeText(activity, "Unexpected API response: ${e.body}", Toast.LENGTH_LONG).show()
+                Log.d(TAG, "Unexpected API response: ${e.body}")
             } catch (e: SocketTimeoutException) {
-                Toast.makeText(activity, "Time out", Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, "Connection timeout: $e", Toast.LENGTH_LONG).show()
             }
 
         }
         swiperefresh.isRefreshing = false
-
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -116,6 +101,7 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
     companion object {
 
         private const val TAG = "TradeRecordFragment"
+        private lateinit var api: Api
 
         @JvmStatic
         fun newInstance(name: String) = TradeRecordFragment().apply {
@@ -126,23 +112,23 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
 
         class MyTradeRecordRecyclerViewAdapter(
-                private val mValues: List<Record>, private val username:String)
+                private val mValues: List<Record>, private val username: String)
             : RecyclerView.Adapter<MyTradeRecordRecyclerViewAdapter.ViewHolder>() {
 
 
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
                 val view = LayoutInflater.from(parent.context)
-                        .inflate(R.layout.fragment_traderecord, parent, false)
+                        .inflate(R.layout.fragment_traderecord_item, parent, false)
                 return ViewHolder(view)
             }
 
             override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 val item = mValues[position]
+                Log.d("RENDER_ITEM", "rendering ${item.username_from} ${item.username_to} ${item.amount}")
                 holder.timeView.text = item.time
-                holder.objectView.text = if (item.username_from==username) item.username_to else item.username_from
-                holder.moneyView.text = if (item.username_from==username) "-${item.amount}" else "+${item.amount}"
-                holder.moneyView.setTextColor(if (item.username_from!=username) Color.RED else Color.BLACK)
-
+                holder.objectView.text = if (item.username_from == username) "to ${item.username_to}" else "from ${item.username_from}"
+                holder.moneyView.text = "${item.amount}"
+                holder.moneyView.setTextColor(if (item.username_from != username) Color.RED else Color.BLACK)
 
                 with(holder.mView) {
                     tag = item
@@ -156,9 +142,6 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
                 val objectView: TextView = mView.`object`
                 val moneyView: TextView = mView.money
 
-//                override fun toString(): String {
-//                    return super.toString() + " '" + timeView.text + "'"
-//                }
             }
         }
     }

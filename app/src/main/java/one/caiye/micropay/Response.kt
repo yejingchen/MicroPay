@@ -37,5 +37,5 @@ data class Record(
 
 data class RecordsResponse(
         val status: String,
-        val payload: ArrayList<Record>
+        val payload: List<Record>
 )

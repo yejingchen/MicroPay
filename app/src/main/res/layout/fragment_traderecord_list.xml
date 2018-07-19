@@ -34,6 +34,6 @@
             android:layout_marginRight="16dp"
             app:layoutManager="LinearLayoutManager"
             tools:context=".TradeRecordFragment"
-            tools:listitem="@layout/fragment_traderecord" />
+            tools:listitem="@layout/fragment_traderecord_item" />
 
 </android.support.v4.widget.SwipeRefreshLayout>

@@ -72,46 +72,23 @@ class Api(val context: Context) {
         return Result.err(error)
     }
 
-    /**
-     * @param err Bangumi API has a bug with certain calls, if the specified username doesn't exist,
-     * the web API will return a HTML page instead of JSON data.
-     * As a workaround, pass a Err<ErrorResponse> (usually a 404 message) to [err] to prevent
-     * UnexpectedAPIRespException from being thrown, and return [err] instead.
-     */
-    private inline fun <reified T> parseJsonArray(json: String, err: Result.Err<ErrorResponse>? = null):
-            Result<List<T>, ErrorResponse> {
-
-        return try {
-            val type = Types.newParameterizedType(List::class.java, T::class.java)
-            val adapter = moshi.adapter<List<T>>(type)
-            val list = adapter.fromJson(json)!!
-            Result.ok(list)
-        } catch (e: JsonDataException) {
-            parseErrorResponse(json)
-        } catch (e: IOException) {
-            err ?: throw UnexpectedAPIRespException("Malformed API response", json)
-        }
-    }
-
-    /**
-     * @param err see [parseJsonArray]
-     */
-    private inline fun <reified T> parseJson(json: String, err: Result.Err<ErrorResponse>? = null):
+    private inline fun <reified T> parseJson(json: String):
             Result<T, ErrorResponse> {
 
         return try {
             val adapter = moshi.adapter(T::class.java)
             val data = adapter.fromJson(json)!!
+            Log.d(TAG, "Parsed $data")
             Result.ok(data)
         } catch (e: JsonDataException) {
             Log.d(TAG, "parseJson: maybe a ErrorResponse")
-            return parseErrorResponse(json)
+            parseErrorResponse(json)
         } catch (e: IOException) {
-            err ?: throw UnexpectedAPIRespException("Malformed API response", json)
+            throw UnexpectedAPIRespException("Malformed API response", json)
         } catch (e: Exception) {
-            Log.wtf(TAG, "parseJson: Exception $e")
+            Log.wtf(TAG, "Exception $e")
             e.printStackTrace()
-            err!!
+            throw e
         }
     }
 
