@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
 
         class MyPageAdapter(fm: FragmentManager?) : FragmentPagerAdapter(fm) {
 
-            private val tabTitles = arrayOf("我", "收款", "转账", "查询","购物")
+            private val tabTitles = arrayOf("我", "收款", "转账", "交易历史","购物")
 
             override fun getPageTitle(position: Int): CharSequence? {
                 return tabTitles[position]

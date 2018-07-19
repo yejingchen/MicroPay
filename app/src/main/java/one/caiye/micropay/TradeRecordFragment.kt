@@ -22,7 +22,7 @@ import java.net.SocketTimeoutException
 class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 
     private var mTcpClient: TcpClient? = null
-    private var transferRecord: List<Record> = ArrayList()
+    private val transferRecord: MutableList<Record> = ArrayList()
 
     private lateinit var username: String
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +43,7 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
         val message = "RECORD\n"
         async(UI) {
             try {
+                /*
                 transferRecord = bg {
                     mTcpClient!!.connect()
                     mTcpClient!!.sendMessage(message)
@@ -73,6 +74,8 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
 //                    mTcpClient!!.logInResult
                     recordArray
                 }.await()
+                */
+                transferRecord.add(Record("payer", "payee", "2018-07-19-11-17-00", "1984"))
                 list.adapter = MyTradeRecordRecyclerViewAdapter(transferRecord, username)
 
             } catch (e: SocketTimeoutException) {
