@@ -2,13 +2,13 @@
     <string name="app_name">MicroPay</string>
     <string name="action_settings">Settings</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="EMAIL">Email</string>
     <string name="PASSWORD">password</string>
     <string name="LOGIN">Log In</string>
     <string name="money_input_hint">money amount</string>
     <string name="transfer">transfer</string>
+    <string name="nfc_transfer">nfc transfer</string>
     <string name="receive_money">receive</string>
     <string name="account">account</string>
     <string name="username">username</string>
@@ -27,5 +27,11 @@
         completions."
     </string>
     <string name="welcome" translatable="false">Welcome</string>
+    <string name="use_nfc_label">Or use NFC...</string>
+    <string name="receiver_account">Receiver Account</string>
+    <string name="Shopping">Shopping</string>
+    <string name="ItemID">ItemID</string>
+    <string name="UserID">UserID</string>
+    <string name="set_button">Set Button</string>
 
 </resources>

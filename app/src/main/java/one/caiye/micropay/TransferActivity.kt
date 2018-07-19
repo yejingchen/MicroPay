@@ -1,63 +1,136 @@
 package one.caiye.micropay
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.content.Intent
 import android.nfc.NdefMessage
-import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
-import android.nfc.NfcEvent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
+import android.view.View
 import android.widget.Toast
-import kotlinx.android.synthetic.main.activity_transfer.*
+import kotlinx.android.synthetic.main.activity_receive.*
 import kotlinx.coroutines.experimental.android.UI
 import kotlinx.coroutines.experimental.async
 import org.jetbrains.anko.coroutines.experimental.bg
+import java.net.SocketTimeoutException
 
-class TransferActivity : AppCompatActivity(), NfcAdapter.CreateNdefMessageCallback {
+class TransferActivity : AppCompatActivity() {
 
-    private var moneyAmount: String? = null
+    private var mTcpClient: TcpClient? = null
     private var username: String? = null
-    private var mTcpClient = TcpClient.instance
-    private var password: String? = null
 
-    private var mNfcAdapter: NfcAdapter? = null
+
+    companion object {
+        const val TAG = "TransferActivity"
+    }
+
+    private lateinit var mNfcAdapter: NfcAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_transfer)
+        setContentView(R.layout.activity_receive)
+        val tmp: NfcAdapter? = NfcAdapter.getDefaultAdapter(this)
 
-
-        username = intent.getStringExtra("username")
-        moneyAmount = intent.getStringExtra("money")
-        password = intent.getStringExtra("payerPassword")
-
-        mNfcAdapter = NfcAdapter.getDefaultAdapter(this)
-
-        if (mNfcAdapter == null) {
+        if (tmp == null) {
             Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
             finish()
             return
         } else {
             Toast.makeText(this, "NFC is available", Toast.LENGTH_LONG).show()
+            mNfcAdapter = tmp
         }
-        mNfcAdapter!!.setNdefPushMessageCallback(this, this)
-        transferTextView.text = "Transfering..."
-        async(UI){
-            bg{
-                val response = mTcpClient.read()
-                val responseArray = response!!.split("%")
-                if (responseArray[0]=="EXPENSE"){
-                    Toast.makeText(this@TransferActivity, "Transfer Success", Toast.LENGTH_LONG ).show()
-                    transferTextView.text = "Transfer Success"
+        mNfcAdapter.setNdefPushMessage(null, this)
+
+//        showProgress(false)
+        Log.d(TAG, "textview is ${receive_textView.text}")
+
+        username = intent.getStringExtra("username")
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action) {
+            processIntent(intent)
+        }
+    }
+
+    private fun processIntent(intent: Intent?) {
+        val rawMsgs = intent?.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
+        val msg = rawMsgs?.get(0) as NdefMessage
+        receive_textView.text = "waiting..."
+        Log.d(TAG, "textview is ${receive_textView.text}")
+        val seq = String(msg.records[0].payload).splitToSequence("%")
+        val payer = seq.first()
+        val payerPassword = seq.elementAt(1)
+        val money = seq.last()
+
+        sendServerMessage(payer, payerPassword, money)
+    }
+
+    private fun sendServerMessage(payer: String, payerPassword: String, money: String) {
+        showProgress(true)
+
+        if (mTcpClient == null) {
+            mTcpClient = TcpClient.instance
+        }
+
+        val transferMessage = "TRANSFER%$payer%$payerPassword%$username%$money\n"
+        async(UI) {
+            try {
+                val response = bg {
+                    mTcpClient!!.connect()
+                    mTcpClient!!.sendMessage(transferMessage)
+                    Log.d(TAG, "message sent")
+                    val response = mTcpClient!!.read()
+                    mTcpClient!!.read()
+                    response
+//                    mTcpClient!!.logInResult
+                }.await()
+                Log.d(TAG, "transfer response: [$response]")
+                when (response) {
+                    "TRANSFER_ERROR%PASSWORD_INCORRECT" -> {
+                        Toast.makeText(this@TransferActivity, "password incorrect", Toast.LENGTH_SHORT).show()
+                        receive_textView.text = "wrong password"
+                    }
+                    "TRANSFER_SUCCESS" -> {
+//                        mTcpClient!!.read()
+                        Toast.makeText(this@TransferActivity, "success", Toast.LENGTH_SHORT).show()
+                        receive_textView.text = "success! get ${money} yuan from ${payer}"
+                    }
+
+                    else -> {
+                        Toast.makeText(this@TransferActivity, "strange error", Toast.LENGTH_SHORT).show()
+                        receive_textView.text = "strange error"
+                    }
                 }
+
+
+            } catch (e: SocketTimeoutException) {
+                Toast.makeText(this@TransferActivity, "Time out", Toast.LENGTH_SHORT).show()
             }
+
+            showProgress(false)
         }
-    }
 
-    override fun createNdefMessage(p0: NfcEvent?): NdefMessage {
-        val text = "$username%$password%$moneyAmount"
-        return NdefMessage(arrayOf(
-                NdefRecord.createMime("pay/vnd.micropay.caiye", text.toByteArray())
-        ))
     }
 
 
+    private fun showProgress(show: Boolean) {
+
+        val shortAnimTime = resources.getInteger(android.R.integer.config_shortAnimTime)
+        mReceiveProgressBar.visibility = (if (show) View.VISIBLE else View.GONE)
+        mReceiveProgressBar.animate().setDuration(shortAnimTime.toLong()).alpha(
+                (if (show) 1 else 0).toFloat()).setListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                mReceiveProgressBar.visibility = if (show) View.VISIBLE else View.GONE
+            }
+        })
+    }
+
+
+    public override fun onNewIntent(intent: Intent) {
+        setIntent(intent)
+    }
 }

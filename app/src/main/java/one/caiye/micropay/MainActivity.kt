@@ -1,5 +1,6 @@
 package one.caiye.micropay
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v4.app.FragmentManager
@@ -10,7 +11,6 @@ import android.view.MenuItem
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
-
 class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
@@ -20,11 +20,15 @@ class MainActivity : AppCompatActivity() {
     companion object {
         lateinit var username: String
         lateinit var logInPassword: String
-        const val NUM_ITEMS = 4
+        var shoppreference: SharedPreferences? = null
+        var shopeditor: SharedPreferences.Editor? = null
+        var httppreference: SharedPreferences? = null
+        var httpeditor: SharedPreferences.Editor? = null
+        const val NUM_ITEMS = 5
 
         class MyPageAdapter(fm: FragmentManager?) : FragmentPagerAdapter(fm) {
 
-            private val tabTitles = arrayOf("我", "转账", "收款", "查询")
+            private val tabTitles = arrayOf("我", "收款", "转账", "查询","购物")
 
             override fun getPageTitle(position: Int): CharSequence? {
                 return tabTitles[position]
@@ -40,9 +44,10 @@ class MainActivity : AppCompatActivity() {
                         f.arguments = args
                         f
                     }
-                    1 -> TransferFragment.newInstance(username)
-                    2 -> ReceiveFragment.newInstance(username)
+                    1 -> ReceiveFragment.newInstance(username)
+                    2 -> TransferFragment.newInstance(username)
                     3 -> TradeRecordFragment.newInstance(username)
+                    4 -> ShoppingFragment.newInstance(username)
                     else -> {
                         val f = MyFragment()
                         f.arguments = args
@@ -70,7 +75,10 @@ class MainActivity : AppCompatActivity() {
 
         username = intent.getStringExtra("username")
         logInPassword = intent.getStringExtra("LogInPassword")
-
+        shoppreference=getSharedPreferences("shopping", MODE_PRIVATE)
+        shopeditor=shoppreference?.edit()
+        httppreference=getSharedPreferences("cookie", MODE_PRIVATE)
+        httpeditor=shoppreference?.edit()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
