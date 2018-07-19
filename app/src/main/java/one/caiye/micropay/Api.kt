@@ -92,6 +92,10 @@ class Api(val context: Context) {
         }
     }
 
+    fun clearCookies() {
+        cookieJar.clear()
+    }
+
     // APIs
 
     fun login(username: String, password: String): Result<MPResponse, ErrorResponse> {

@@ -36,7 +36,6 @@ class TradeRecordFragment : Fragment(), SwipeRefreshLayout.OnRefreshListener {
     }
 
     override fun onRefresh() {
-        Toast.makeText(activity, "refresh", Toast.LENGTH_SHORT).show()
         transferRecord.clear()
 
         async(UI) {

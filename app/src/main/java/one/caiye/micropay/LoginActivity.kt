@@ -2,7 +2,9 @@ package one.caiye.micropay
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
@@ -22,14 +24,27 @@ import java.net.SocketTimeoutException
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var api: Api
+    private lateinit var pref: SharedPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        pref = getSharedPreferences("login", Context.MODE_PRIVATE)
+        if (pref.contains(PREF_USER_TAG)) {
+            gotoMain()
+        }
         api = Api(this)
+
         setContentView(R.layout.activity_login)
         logInButton.setOnClickListener { attemptLogin() }
         showProgress(false)
 
+    }
+
+    private fun gotoMain() {
+        val intent = Intent(this@LoginActivity, MainActivity::class.java)
+        intent.putExtra("username", pref.getString(PREF_USER_TAG, null))
+        startActivity(intent)
     }
 
     /**
@@ -51,9 +66,11 @@ class LoginActivity : AppCompatActivity() {
                         Log.d(TAG, "Login Success")
 
                         Toast.makeText(this@LoginActivity, "Login Success", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(this@LoginActivity, MainActivity::class.java)
-                        intent.putExtra("username", username)
-                        startActivity(intent)
+                        with (pref.edit()) {
+                            putString("username",username)
+                            apply()
+                        }
+                        gotoMain()
                     }
 
                     is Result.Err -> {
@@ -89,5 +106,6 @@ class LoginActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "LoginActivity"
+        const val PREF_USER_TAG = "username"
     }
 }
