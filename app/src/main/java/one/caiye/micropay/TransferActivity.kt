@@ -40,6 +40,7 @@ class TransferActivity : AppCompatActivity() {
             return
         }
 
+        mNfcAdapter = tmp
         mNfcAdapter.setNdefPushMessage(null, this)
 
         username = intent.getStringExtra("username")
